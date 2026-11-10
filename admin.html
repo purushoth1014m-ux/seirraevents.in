@@ -1,0 +1,30 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Sierra admin</title>
+<style>body{font:14px system-ui;margin:0;padding:20px;background:#f2f5fc;color:#0b2a6f}a,button.l{color:#0b2a6f;background:none;border:0;cursor:pointer;font:inherit;text-decoration:underline;padding:0}
+#login{display:grid;place-items:center;min-height:80vh}#login form{background:#fff;padding:32px;border-radius:12px;display:grid;gap:12px;width:min(320px,90vw);box-shadow:0 2px 20px #0b2a6f22}
+input,select{padding:9px;font:inherit;border:1px solid #c8d3ec;border-radius:8px}button.b{padding:9px 14px;background:#0b2a6f;color:#fff;border:0;border-radius:8px;cursor:pointer}
+.bar{display:flex;gap:14px;flex-wrap:wrap;align-items:center;margin-bottom:14px}.w{overflow-x:auto;background:#fff;border-radius:12px;box-shadow:0 2px 20px #0b2a6f22}
+table{border-collapse:collapse;width:100%;min-width:900px}th,td{padding:10px 12px;text-align:left;border-bottom:1px solid #e3e9f7;vertical-align:top}th{background:#e8eefc}.i{display:flex;gap:6px}.err{color:#b00020}[hidden]{display:none!important}</style></head><body>
+<div id="login"><form id="lf"><h2 style="margin:0">Sierra admin</h2><p class="err" id="le"></p><input type="password" id="pw" placeholder="Password" required autofocus><button class="b">Log in</button></form></div>
+<div id="app" hidden><div class="bar"><h2 style="margin:0">Enquiries (<span id="n">0</span>)</h2><label>Status <select id="flt"><option value="">All</option></select></label><button class="l" id="csv">Download CSV</button><button class="l" id="out">Log out</button></div>
+<div class="w"><table><thead><tr><th>ID / date</th><th>Contact</th><th>Event</th><th>Details</th><th>Status / owner</th></tr></thead><tbody id="tb"></tbody></table></div></div>
+<script>
+const ST=["New","Contacted","Quoted","Won","Lost"],$=s=>document.querySelector(s);let pw=sessionStorage.getItem('pw')||'',rows=[];
+const E=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const api=(u,o={})=>fetch(u,{...o,headers:{'x-admin-password':pw,'Content-Type':'application/json'}});
+ST.forEach(s=>$('#flt').insertAdjacentHTML('beforeend',`<option>${s}</option>`));
+async function load(){const r=await api('/api/admin');if(!r.ok){const j=await r.json().catch(()=>({}));$('#le').textContent=j.error||'Login failed.';sessionStorage.removeItem('pw');return false}
+rows=(await r.json()).rows;$('#login').hidden=true;$('#app').hidden=false;draw();return true}
+function draw(){const f=$('#flt').value,v=rows.filter(r=>!f||r.status===f);$('#n').textContent=v.length;
+$('#tb').innerHTML=v.map(r=>`<tr><td><b>${E(r.enquiry_id)}</b><br>${E(new Date(r.created_at).toLocaleString())}</td>
+<td>${E(r.name)}<br><a href="tel:${E(r.phone)}">${E(r.phone)}</a><br><a href="mailto:${E(r.email)}">${E(r.email)}</a></td>
+<td>${E(r.event_type)}<br>${E(r.event_date)} ${E(r.duration)}<br>${E([r.location,r.city,r.setting].filter(Boolean).join(', '))}</td>
+<td>${E(r.scope)} | ${E(r.budget)}<br>${E(r.design_code)} ${E(r.theme)} ${r.guests?'| '+E(r.guests)+' guests':''}${r.recurring?' | <b>Recurring</b>':''}<br>${E(r.message)}</td>
+<td><div class="i"><select>${ST.map(s=>`<option${s===r.status?' selected':''}>${s}</option>`).join('')}</select><input placeholder="Owner" size="10" value="${E(r.owner)}"><button class="b" data-id="${E(r.enquiry_id)}">Save</button></div></td></tr>`).join('')||'<tr><td colspan="5">No enquiries yet.</td></tr>'}
+$('#tb').onclick=async e=>{const b=e.target.closest('button[data-id]');if(!b)return;const c=b.parentElement;b.textContent='...';
+const r=await api('/api/admin',{method:'POST',body:JSON.stringify({id:b.dataset.id,status:c.querySelector('select').value,owner:c.querySelector('input').value})});
+if(r.ok){const x=rows.find(x=>x.enquiry_id===b.dataset.id);x.status=c.querySelector('select').value;x.owner=c.querySelector('input').value}b.textContent=r.ok?'Saved':'Failed';setTimeout(()=>b.textContent='Save',1200)};
+$('#flt').onchange=draw;$('#lf').onsubmit=async e=>{e.preventDefault();pw=$('#pw').value;if(await load())sessionStorage.setItem('pw',pw)};
+$('#out').onclick=()=>{sessionStorage.removeItem('pw');location.reload()};
+$('#csv').onclick=async()=>{const r=await api('/api/admin?csv=1');const u=URL.createObjectURL(await r.blob());Object.assign(document.createElement('a'),{href:u,download:'sierra-enquiries.csv'}).click()};
+if(pw)load();
+</script></body></html>

@@ -1,0 +1,7 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex"><title>Backend status</title>
+<style>body{font:16px system-ui;max-width:520px;margin:60px auto;padding:0 20px;color:#0b2a6f}.ok{color:#0a7a3d}.bad{color:#b00020}a.b{display:inline-block;margin-top:14px;background:#0b2a6f;color:#fff;padding:12px 22px;border-radius:99px;text-decoration:none}</style></head><body>
+<h2>Backend status</h2><p id="s">Checking...</p><div id="d"></div>
+<script>
+fetch('/api/ping').then(r=>r.json()).then(j=>{if(!j.ok)throw 0;document.getElementById('s').innerHTML='<b class="ok">Backend is running.</b>';document.getElementById('d').innerHTML='<a class="b" href="/admin.html">Open admin login</a>'})
+.catch(()=>{document.getElementById('s').innerHTML='<b class="bad">Backend functions are NOT deployed.</b> Deploy this folder from GitHub (see README) instead of drag and drop.'});
+</script></body></html>
